@@ -12,4 +12,4 @@ Tim Mattias Juksaar (design lead) - Supports user research, helps identify user 
 
 Jan Erik Jakstein (development lead) - Advises on technical feasibility, Android platform requirements, technology-stack options, dependencies, risks, timeline, and development complexity.
 
-Sanel Štein (quality lead) - Identifies quality risks, testing needs, acceptance criteria, device requirements, data and permission concerns, and possible failure points before design and development begin.
+Sanel Štein (quality lead) - Identified quality risks, device requirements and failure points.
