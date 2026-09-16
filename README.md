@@ -1,14 +1,15 @@
 # MAD-2026-Grupp1
 Grupp1 Github repo
 
+
 Stage 1:
 
 Uku Konsap (product lead) - 
 
 Ken Parijõgi (product lead) - 
 
-Tim Mattias Juksaar (design lead) - 
+Tim Mattias Juksaar (design lead) - Supports user research, helps identify user needs, analyzes competitor app experiences, and advises the team about early usability risks.
 
-Jan Erik Jakstein (development lead) -
+Jan Erik Jakstein (development lead) - Advises on technical feasibility, Android platform requirements, technology-stack options, dependencies, risks, timeline, and development complexity.
 
-Sanel Štein (quality lead) -
+Sanel Štein (quality lead) - Identifies quality risks, testing needs, acceptance criteria, device requirements, data and permission concerns, and possible failure points before design and development begin.
