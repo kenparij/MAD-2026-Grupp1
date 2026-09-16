@@ -4,7 +4,7 @@ Grupp1 Github repo
 
 Stage 1:
 
-Uku Konsap (product lead) - 
+Uku Konsap (product lead) - Came up with the core vision for the app, defined target users, business goals, success metrics, which features should be included and their priorities. Organized the report and improved the wording. Used Trod and helped with risks and assumptions.
 
 Ken Parijõgi (product lead) - Created and managed Github repo, document formatting, roadmap design, general polish.
 
