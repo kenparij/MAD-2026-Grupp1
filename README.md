@@ -6,7 +6,7 @@ Stage 1:
 
 Uku Konsap (product lead) - 
 
-Ken Parijõgi (product lead) - 
+Ken Parijõgi (product lead) - Created and managed Github repo, document formatting, roadmap design, general polish.
 
 Tim Mattias Juksaar (design lead) - Supported user research, helped identify user needs, analyzed competitor app experiences, and advised the team about early usability risks.
 
