@@ -8,8 +8,8 @@ Uku Konsap (product lead) -
 
 Ken Parijõgi (product lead) - 
 
-Tim Mattias Juksaar (design lead) - Supports user research, helps identify user needs, analyzes competitor app experiences, and advises the team about early usability risks.
+Tim Mattias Juksaar (design lead) - Supported user research, helped identify user needs, analyzes competitor app experiences, and advised the team about early usability risks.
 
-Jan Erik Jakstein (development lead) - Advises on technical feasibility, Android platform requirements, technology-stack options, dependencies, risks, timeline, and development complexity.
+Jan Erik Jakstein (development lead) - Advised on technical feasibility, Android platform requirements, technology-stack options, dependencies, risks, timeline, and development complexity.
 
 Sanel Štein (quality lead) - Identified quality risks, device requirements and failure points.
