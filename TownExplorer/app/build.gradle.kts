@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.towneexplorer"
+    namespace = "com.example.townexplorer"
     compileSdk {
         version = release(37)
     }

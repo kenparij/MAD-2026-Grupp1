@@ -1,6 +1,12 @@
-package com.example.towneexplorer.ui.theme
+package com.example.townexplorer.ui.theme
 
 import androidx.compose.ui.graphics.Color
+
+val OnPrimary = Color(0xFFEFF0FF)
+val Primary = Color(0xFF514C6F)
+val OnPrimaryContainer = Color(0xFFFFFFFF)
+val PrimaryContainer = Color(0xFF524F64)
+val Error = Color(0xFFBD2528)
 
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)

@@ -1,6 +1,9 @@
-package com.example.towneexplorer.ui.navigation
+package com.example.townexplorer.ui.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
@@ -14,6 +17,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 
+//defines the navigation bar component
+//code example taken from https://developer.android.com/develop/ui/compose/components/navigation-bar
 @Composable
 fun NavigationBar(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
@@ -23,7 +28,9 @@ fun NavigationBar(modifier: Modifier = Modifier) {
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            NavigationBar(windowInsets = NavigationBarDefaults.windowInsets) {
+            NavigationBar(windowInsets = NavigationBarDefaults.windowInsets,
+                containerColor = MaterialTheme.colorScheme.primary,
+            ) {
                 Destination.entries.forEachIndexed { index, destination ->
                     NavigationBarItem(
                         selected = selectedDestination == index,
@@ -32,12 +39,14 @@ fun NavigationBar(modifier: Modifier = Modifier) {
                             selectedDestination = index
                         },
                         icon = {
-//                            Icon(
-//                                destination.icon,
-//                                contentDescription = destination.contentDescription
-//                            )
+                            Icon(
+                                destination.icon,
+                                contentDescription = destination.contentDescription,
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
                         },
-                        label = { Text(destination.label) }
+                        label = { Text(destination.label,
+                            color = MaterialTheme.colorScheme.onPrimary) }
                     )
                 }
             }

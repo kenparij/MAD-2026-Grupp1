@@ -1,4 +1,4 @@
-package com.example.towneexplorer
+package com.example.townexplorer
 
 import org.junit.Test
 
