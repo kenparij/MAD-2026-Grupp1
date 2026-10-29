@@ -7,7 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.towneexplorer.ui.screens.HomeScreen
 import com.example.towneexplorer.ui.screens.ProfileScreen
-import com.example.towneexplorer.ui.screens.QuestsScreen
+import com.example.towneexplorer.ui.screens.questsScreen
 
 @Composable
 fun AppNavHost(
@@ -22,7 +22,7 @@ fun AppNavHost(
         Destination.entries.forEach { destination ->
             composable(destination.route) {
                 when (destination) {
-                    Destination.QUESTS -> QuestsScreen()
+                    Destination.QUESTS -> questsScreen()
                     Destination.HOME -> HomeScreen()
                     Destination.PROFILE -> ProfileScreen()
                 }
