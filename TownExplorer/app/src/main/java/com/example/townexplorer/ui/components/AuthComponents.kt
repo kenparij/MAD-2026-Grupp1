@@ -36,24 +36,17 @@ import androidx.compose.ui.unit.dp
 // ================================================================================================
 // Shared UI pieces for the Login, Sign up and Forgot password screens, so the three screens look
 // identical.
-//
-// Comment convention used in this file:
-//   /** ... */   = what the class / function is FOR
-//   // Source:   = the page the code or the API usage was taken from
 // ===============================================================================================
 
 /**
  * Width of the fields, title and buttons as a fraction of the screen width.
  *
- * Using Modifier.fillMaxWidth(fraction), which is documented here:
+ * Using Modifier.fillMaxWidth(fraction)
  *   Source: https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/fillMaxWidth.modifier
- * (QuestsScreen.kt already uses fillMaxWidth(0.6f) the same way.)
  */
 const val AUTH_CONTENT_WIDTH = 0.65f
 
 /**
- * Layout shared by all three screens: a centered title at the top, with the screen's own content below it.
- *
  * @param title - text shown as the big heading.
  * @param content - the fields, buttons and links of the screen (placed in a Column).
  */
@@ -87,8 +80,7 @@ fun AuthScreenLayout(
         Spacer(modifier = Modifier.height(96.dp))
         Text(
             text = title,
-            // displaySmall = "the smallest display text" of the Material 3 type scale; it is a default style
-            // (Type.kt only overrides bodyLarge, titleLarge and labelSmall).
+            // displaySmall = "the smallest display text" of the Material 3 type scale
             //   Source: https://kotlinlang.org/api/compose-multiplatform/material3/androidx.compose.material3/-typography/
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.primary,
@@ -100,6 +92,7 @@ fun AuthScreenLayout(
     }
 }
 
+
 /**
  * Filled text field with a clear (x) button. Used for the e-mail and password inputs.
  *
@@ -110,7 +103,7 @@ fun AuthScreenLayout(
  * @param label - hint text shown inside the field (e.g. "e-mail").
  * @param isPassword - hides the typed characters and asks the keyboard for a password input.
  * @param errorMessage - if not null, the field turns red and shows this text under the input line.
- * @param onDone - if not null, the keyboard shows a "Done" key that calls this (use it on the LAST field).
+ * @param onDone - if not null, the keyboard shows a "Done" key that calls this.
  */
 @Composable
 fun AuthTextField(
@@ -136,7 +129,6 @@ fun AuthTextField(
         // Material guidance: the error message appears below the input line and REPLACES the helper
         // text until the problem is fixed - that is what supportingText is used for here.
         //   Source: https://m2.material.io/go/design-text-fields
-        // `if (...) { { Text() } } else null` is used so the lambda is inferred as @Composable.
         supportingText = if (errorMessage != null) {
             { Text(errorMessage) }
         } else null,
@@ -172,8 +164,7 @@ fun AuthTextField(
         //   Source: https://developer.android.com/reference/kotlin/androidx/compose/material3/TextFieldDefaults
         //           https://developer.android.com/reference/kotlin/androidx/compose/material3/TextFieldColors
         // Why onPrimary as the field background: in Material 3, "on<colour>" is meant for text/icons placed ON
-        // that colour (see the colour-role table in https://goo.gle/apply-dynamic-color), so this is a deliberate
-        // deviation: Color.kt defines OnPrimary = 0xFFEFF0FF
+        // that colour (see the colour-role table in https://goo.gle/apply-dynamic-color)
         colors = TextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.onPrimary,
             unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary,

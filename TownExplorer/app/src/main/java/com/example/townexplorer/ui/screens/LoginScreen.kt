@@ -23,22 +23,16 @@ import com.example.townexplorer.ui.components.AuthTextField
 import com.example.townexplorer.ui.components.isValidEmail
 
 /**
- * Login screen
  *
- * The screen can do three things:
- *   - "Logs in"                       -> onLogIn(email, password)  (caller then opens Map/Home)
- *   - "Clicks 'Forgot password?'"     -> onForgotPassword()
- *   - "Clicks 'Sign up'"              -> onCreateAccount()
+ * The screen can do 3 things:
+ *   - "Logs in" -> onLogIn(email, password)  (caller then opens Map/Home)
+ *   - "Clicks 'Forgot password?'" -> onForgotPassword()
+ *   - "Clicks 'Sign up'" -> onCreateAccount()
  *
  * When the backend rejects the e-mail/password, the CALLER passes a message in `errorMessage`
- * and the screen shows it in red under the password field (above "Forgot password?"). The message
- * is deliberately ONE generic text for both fields, so it does not reveal whether the e-mail or
- * the password was wrong.
- *   Source: https://wiki.owasp.org/index.php?diff=next&oldid=109796&title=Authentication_Cheat_Sheet
- *   (OWASP Authentication Cheat Sheet, "Authentication and Error Messages": respond with a generic error message
- *    regardless of whether the user ID or the password was incorrect)
+ * and the screen shows it in red under the password field.
  *
- * The screen never touches the NavController; it only exposes events (lambdas) and the NavHost decides what
+ * The screen never touches the NavController; it only exposes events and the NavHost decides what
  * happens (see AppNavHost.kt).
  *   Source: https://developer.android.com/guide/navigation/navigation-navigate  ("Expose events from your composables")
  *
@@ -57,10 +51,8 @@ fun LoginScreen(
     errorMessage: String? = null,
     onCredentialsChanged: () -> Unit = {}
 ) {
-    // rememberSaveable keeps what the user typed across configuration changes such as rotation.
+    // rememberSaveable keeps what the user typed across configuration changes.
     //   Source: https://developer.android.com/develop/ui/compose/state
-    //   (the HelloScreen sample uses `var name by rememberSaveable { mutableStateOf("") }`, and the page
-    //    explains that plain remember does not survive configuration changes)
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
@@ -106,8 +98,7 @@ fun LoginScreen(
 
         // "Incorrect e-mail or password" small red text, left-aligned under the password field.
         // colorScheme.error is the Material 3 role "used to indicate errors in components,
-        // such as invalid text in a text field" (Color.kt defines it as Error = 0xFFBD2528
-        // and Theme.kt passes it to lightColorScheme):
+        // such as invalid text in a text field"
         //   Source: https://developer.android.com/reference/kotlin/androidx/tv/material3/ColorScheme
         //   (same role description; the phone version is https://developer.android.com/reference/kotlin/androidx/compose/material3/ColorScheme)
         //
@@ -129,8 +120,6 @@ fun LoginScreen(
         // Box(contentAlignment = ...) aligns its child inside it:
         //   Source: https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/fillMaxWidth.modifier
         //
-        // TextButton is the documented low-emphasis button, and `contentPadding` is one of its parameters;
-        // labelSmall is the small text style defined in Type.kt.
         //   Source: https://developer.android.com/reference/kotlin/androidx/compose/material3/TextButton.composable
         //           https://developer.android.com/develop/ui/compose/components/button
         Box(

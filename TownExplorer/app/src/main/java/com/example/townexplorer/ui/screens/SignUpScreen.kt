@@ -20,9 +20,8 @@ import com.example.townexplorer.ui.components.isValidEmail
 
 
 /**
- * Sign up screen
  *
- * User journey: "Enters e-mail" -> "Enters password" -> "Clicks 'Sign up'".
+ * "Enters e-mail" -> "Enters password" -> "Clicks 'Sign up'".
  * If the backend says "A user already exists that is using this e-mail", the user stays on this screen and goes
  * back to entering the e-mail. The `errorMessage` parameter is the CALLER (which
  * talks to the backend), it passes the message in, and the screen shows it under the e-mail field. Typically backends

@@ -42,10 +42,12 @@ fun AppNavHost(
         navController,
         startDestination = startDestination
     ) {
-        // ---- Auth flow (from our user journey diagram) ----
+
+        // ---- Auth flow ----
 
         // Login screen route.
         composable(AuthDestination.LOGIN.route) {
+
             // Holds the backend error for invalid credentials
             // remember + mutableStateOf:
             //   Source: https://developer.android.com/develop/ui/compose/state
@@ -90,7 +92,7 @@ fun AppNavHost(
                 // Clears the old error as soon as the user edits the e-mail.
                 onEmailChanged = { signUpError = null },
                 onSignUp = { _, _ ->
-                    // TODO (placeholder): call backend here (Firebase example: createUserWithEmailAndPassword).
+                    // TODO: call backend here (Firebase example: createUserWithEmailAndPassword).
                     // If the e-mail is already registered (Firebase throws FirebaseAuthUserCollisionException,
                     // https://itnext.io/android-firebase-authentication-email-and-password-login-b06980cf864a),
                     // show error and stay on this screen:
@@ -110,10 +112,10 @@ fun AppNavHost(
         composable(AuthDestination.FORGOT_PASSWORD.route) {
             ForgotPasswordScreen(
                 onSendResetLink = { email ->
-                    // TODO (placeholder): actually send the reset e-mail via backend
+                    // TODO: actually send the reset e-mail via backend
                     // (Firebase example: sendPasswordResetEmail).
                     //
-                    // Diagram: "Email is sent" -> back to the Log in screen. A Toast tells the user what
+                    // "Email is sent" -> back to the Log in screen. A Toast tells the user what
                     // happened; it stays visible while the screen changes.
                     //   Source: https://developer.android.com/guide/topics/ui/notifiers/toasts
                     //   (Toast.makeText(context, text, duration).show())

@@ -33,9 +33,6 @@ fun NavigationBar(modifier: Modifier = Modifier) {
 
     // Observe the current destination to know which screen is showing.
     //   Source: https://developer.android.com/develop/ui/compose/navigation  ("Integration with the bottom nav bar")
-    //   (`val navBackStackEntry by navController.currentBackStackEntryAsState()` /
-    //    `val currentDestination = navBackStackEntry?.destination`)
-
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -47,7 +44,6 @@ fun NavigationBar(modifier: Modifier = Modifier) {
     //           https://slack-chats.kotlinlang.org/t/508901/i-want-to-hide-my-bottom-nav-on-certain-screens-right-now-i-
     // `any { }` returns true if at least one element matches:
     //   Source: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.enums/-enum-entries/
-
     val showBottomBar = Destination.entries.any { it.route == currentRoute }
 
 

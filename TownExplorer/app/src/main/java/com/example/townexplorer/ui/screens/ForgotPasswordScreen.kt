@@ -19,10 +19,10 @@ import com.example.townexplorer.ui.components.isValidEmail
 
 /**
  * Forgot password screen: Log in screen -> "Clicks 'Forgot password?'"
- * -> "Email is sent" -> back to the Log in screen).
+ * -> "Email is sent" -> back to the Log in screen.
  *
- *   - "Send reset link"        -> onSendResetLink(email); the caller sends the e-mail and returns to Log in
- *   - "Back to login screen"   -> onBackToLogin()
+ *   - "Send reset link" -> onSendResetLink(email); the caller sends the e-mail and returns to Log in
+ *   - "Back to login screen" -> onBackToLogin()
  *
  * Only events are exposed; the screen never touches the NavController.
  *   Source: https://developer.android.com/guide/navigation/navigation-navigate  ("Expose events from your composables")
