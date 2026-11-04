@@ -15,7 +15,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-//Displays the user's profile
+/**
+ * Displays the user's profile
+ */
+
 @Composable
 fun ProfileScreen(
     firstName: String,
