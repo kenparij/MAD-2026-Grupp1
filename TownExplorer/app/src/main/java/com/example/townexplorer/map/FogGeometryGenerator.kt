@@ -5,6 +5,7 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
 import org.maplibre.geojson.Polygon
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.sin
 
 object FogGeometryGenerator {
@@ -22,6 +23,10 @@ object FogGeometryGenerator {
      *   https://maplibre.org/maplibre-native/android/examples/geojson-guide/
      *   https://datatracker.ietf.org/doc/html/rfc7946
      */
+    // Grid tile size in degrees
+    private const val GRID_SIZE_DEG = 0.0004
+
+    // Outer fog boundary covering the playable city region
     private val outerBoundary: List<Point> = listOf(
         Point.fromLngLat(26.704, 58.369),
         Point.fromLngLat(26.744, 58.369),
@@ -29,51 +34,59 @@ object FogGeometryGenerator {
         Point.fromLngLat(26.704, 58.389),
         Point.fromLngLat(26.704, 58.369)
     )
-    private val exploredHoles = mutableListOf<List<Point>>()
 
-    fun createCircleHole(
-        latitude: Double,
-        longitude: Double,
-        radiusInMeters: Double = 80.0,
-        pointsCount: Int = 32
-    ): List<Point> {
-        val ring = mutableListOf<Point>()
-        val latRad = Math.toRadians(latitude)
+    private val visitedCells = mutableSetOf<Pair<Int, Int>>()
 
-        val deltaLat = radiusInMeters / 111320.0
-        val deltaLng = radiusInMeters / (111320.0 * cos(latRad))
 
-        for (i in 0 until pointsCount) {
-            val angle = Math.toRadians(i * 360.0 / pointsCount)
-            val lng = longitude + deltaLng * sin(angle)
-            val lat = latitude + deltaLat * cos(angle)
-            ring.add(Point.fromLngLat(lng, lat))
-        }
+     // Generates the initial full fog overlay.
 
-        ring.add(ring.first())
-        return ring
+    fun getInitialFog(): FeatureCollection {
+        val fogPolygon = Polygon.fromLngLats(listOf(outerBoundary))
+        return FeatureCollection.fromFeature(Feature.fromGeometry(fogPolygon))
     }
 
+    /**
+     * Reveals fog cells surrounding the user's location and returns the updated FeatureCollection.
+     *
+     * @param latitude Current user latitude.
+     * @param longitude Current user longitude.
+     * @param revealRadiusCells Grid cell radius to clear around user (1 = 3x3 grid area).
+     */
     fun revealFogAtLocation(
         latitude: Double,
         longitude: Double,
-        radiusInMeters: Double = 80.0
+        revealRadiusCells: Int = 1
     ): FeatureCollection {
-        val newHole = createCircleHole(latitude, longitude, radiusInMeters)
-        exploredHoles.add(newHole)
+        val currentCellX = floor(longitude / GRID_SIZE_DEG).toInt()
+        val currentCellY = floor(latitude / GRID_SIZE_DEG).toInt()
+
+        for (dx in -revealRadiusCells..revealRadiusCells) {
+            for (dy in -revealRadiusCells..revealRadiusCells) {
+                visitedCells.add(Pair(currentCellX + dx, currentCellY + dy))
+            }
+        }
+
+        val holeRings = visitedCells.map { (cellX, cellY) ->
+            val minLng = cellX * GRID_SIZE_DEG
+            val maxLng = (cellX + 1) * GRID_SIZE_DEG
+            val minLat = cellY * GRID_SIZE_DEG
+            val maxLat = (cellY + 1) * GRID_SIZE_DEG
+
+            listOf(
+                Point.fromLngLat(minLng, maxLat),
+                Point.fromLngLat(maxLng, maxLat),
+                Point.fromLngLat(maxLng, minLat),
+                Point.fromLngLat(minLng, minLat),
+                Point.fromLngLat(minLng, maxLat)
+            )
+        }
 
         val allRings = mutableListOf<List<Point>>().apply {
             add(outerBoundary)
-            addAll(exploredHoles)
+            addAll(holeRings)
         }
 
         val fogPolygon = Polygon.fromLngLats(allRings)
-        val fogFeature = Feature.fromGeometry(fogPolygon)
-
-        return FeatureCollection.fromFeature(fogFeature)
-    }
-    fun getInitialFog(): FeatureCollection {
-        val fogPolygon = Polygon.fromLngLats(listOf(outerBoundary))
         return FeatureCollection.fromFeature(Feature.fromGeometry(fogPolygon))
     }
 }

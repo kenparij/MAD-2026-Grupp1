@@ -92,7 +92,7 @@ fun enableUserLocation(context: Context, map: MapLibreMap, style: Style) {
             val updatedFogGeoJson = FogGeometryGenerator.revealFogAtLocation(
                 latitude = location.latitude,
                 longitude = location.longitude,
-                radiusInMeters = 80.0
+                revealRadiusCells = 1
             )
 
             fogSource.setGeoJson(updatedFogGeoJson)
