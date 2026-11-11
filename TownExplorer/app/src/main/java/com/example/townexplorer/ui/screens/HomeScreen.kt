@@ -28,31 +28,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Box
+import com.example.townexplorer.map.MapLibreView
+
 
 /**
- *The home screen of the app, displaying the map
+ * Displays the exploration map and the POI bottom sheet.
+ *
+ * Sources:
+ *   https://developer.android.com/develop/ui/compose
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
     var openBottomSheet by rememberSaveable { mutableStateOf(false) }
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Home Screen")
+
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // Displays the MapLibre map and fog overlay.
+        MapLibreView(
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Opens the POI details bottom sheet.
         Button(
             onClick = { openBottomSheet = true },
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             Text(text = "POI")
         }
     }
+
     if (openBottomSheet) {
-        POIItem(onDismissRequest = { openBottomSheet = false })
+        POIItem(
+            onDismissRequest = { openBottomSheet = false }
+        )
     }
 }
+
 
 /**
  * Displays an overlay bottom sheet on top of the active screen content.
