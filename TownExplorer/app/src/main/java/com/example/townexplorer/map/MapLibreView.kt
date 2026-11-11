@@ -5,6 +5,10 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +32,9 @@ import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.LocationComponentOptions
+import org.maplibre.android.location.engine.LocationEngineCallback
+import org.maplibre.android.location.engine.LocationEngineRequest
+import org.maplibre.android.location.engine.LocationEngineResult
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapLibreMap
@@ -64,7 +71,6 @@ fun enableUserLocation(context: Context, map: MapLibreMap, style: Style) {
 
     val locationComponent = map.locationComponent
 
-    // Configure optional styling parameters (e.g., pulsing circle effect)
     val customOptions = LocationComponentOptions.builder(context)
         .pulseEnabled(true)
         .build()
@@ -77,6 +83,36 @@ fun enableUserLocation(context: Context, map: MapLibreMap, style: Style) {
     locationComponent.isLocationComponentEnabled = true
     locationComponent.cameraMode = CameraMode.TRACKING
     locationComponent.renderMode = RenderMode.COMPASS
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+    val locationListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            val fogSource = style.getSourceAs<GeoJsonSource>("fog-source") ?: return
+
+            val updatedFogGeoJson = FogGeometryGenerator.revealFogAtLocation(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                radiusInMeters = 80.0
+            )
+
+            fogSource.setGeoJson(updatedFogGeoJson)
+        }
+    }
+
+    val provider = when {
+        locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+        locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+        else -> null
+    }
+
+    provider?.let {
+        locationManager.requestLocationUpdates(
+            it,
+            1000L,
+            1f,
+            locationListener
+        )
+    }
 }
 
 
@@ -184,7 +220,7 @@ fun MapLibreView(
 
                         // Creating fog geometry
                         val fogGeoJson =
-                            FogGeometryGenerator.demoGeoJson()
+                            FogGeometryGenerator.getInitialFog()
 
                         val fogSource = GeoJsonSource(
                             "fog-source",
