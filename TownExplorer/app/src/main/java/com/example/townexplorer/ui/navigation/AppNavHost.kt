@@ -137,7 +137,16 @@ fun AppNavHost(
                 when (destination) {
                     Destination.QUESTS -> QuestsScreen()
                     Destination.HOME -> HomeScreen()
-                    Destination.PROFILE -> ProfileScreen("first", "last", "email")
+                    Destination.PROFILE -> ProfileScreen(
+                        firstName = "First",
+                        lastName = "Last",
+                        email = "email@example.com",
+                        onLogOut = {
+                            navController.navigate(AuthDestination.LOGIN.route) {
+                                popUpTo(Destination.HOME.route) { inclusive = true }
+                            }
+                        }
+                    )
                 }
             }
         }

@@ -17,6 +17,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,10 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.townexplorer.ui.theme.Error
 import com.example.townexplorer.ui.theme.PurpleGrey40
 
 /**
- * Displays the user's profile and quest progress
+ * Displays the user's profile, quest progress, and account actions
  */
 @Composable
 fun ProfileScreen(
@@ -35,7 +37,8 @@ fun ProfileScreen(
     lastName: String,
     email: String,
     completedQuests: Int = 2,
-    totalQuests: Int = 5
+    totalQuests: Int = 5,
+    onLogOut: () -> Unit = {}
 ) {
     val progress = if (totalQuests > 0) completedQuests.toFloat() / totalQuests.toFloat() else 0f
 
@@ -118,6 +121,20 @@ fun ProfileScreen(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Log out button
+        OutlinedButton(
+            onClick = onLogOut,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Log out",
+                color = Error,
+            )
+
+        }
     }
 }
 
@@ -130,7 +147,8 @@ fun PreviewProfileScreen() {
             lastName = "Doe",
             email = "john.doe@example.com",
             completedQuests = 3,
-            totalQuests = 6
+            totalQuests = 6,
+            onLogOut = {}
         )
     }
 }
