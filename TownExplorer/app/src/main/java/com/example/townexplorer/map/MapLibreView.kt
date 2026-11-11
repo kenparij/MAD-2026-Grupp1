@@ -1,13 +1,24 @@
 
 package com.example.townexplorer.map
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -15,17 +26,58 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.location.LocationComponentActivationOptions
+import org.maplibre.android.location.LocationComponentOptions
+import org.maplibre.android.location.modes.CameraMode
+import org.maplibre.android.location.modes.RenderMode
+import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
 
+
 private const val MAP_STYLE_URL =
     "https://tiles.openfreemap.org/styles/liberty"
 
 // Approximate centre of Tartu
 private val TARTU_CENTER = LatLng(58.379, 26.724)
+
+fun hasLocationPermission(context: Context): Boolean {
+    val fineGranted = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    val coarseGranted = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    return fineGranted || coarseGranted
+}
+
+@SuppressLint("MissingPermission")
+fun enableUserLocation(context: Context, map: MapLibreMap, style: Style) {
+    if (!hasLocationPermission(context)) return
+
+    val locationComponent = map.locationComponent
+
+    // Configure optional styling parameters (e.g., pulsing circle effect)
+    val customOptions = LocationComponentOptions.builder(context)
+        .pulseEnabled(true)
+        .build()
+
+    val activationOptions = LocationComponentActivationOptions.builder(context, style)
+        .locationComponentOptions(customOptions)
+        .build()
+
+    locationComponent.activateLocationComponent(activationOptions)
+    locationComponent.isLocationComponentEnabled = true
+    locationComponent.cameraMode = CameraMode.TRACKING
+    locationComponent.renderMode = RenderMode.COMPASS
+}
 
 
 /**
@@ -45,6 +97,30 @@ fun MapLibreView(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    var isPermissionGranted by remember { mutableStateOf(hasLocationPermission(context)) }
+    var loadedMapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
+    var loadedStyleInstance by remember { mutableStateOf<Style?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        isPermissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+        if (isPermissionGranted && loadedMapInstance != null && loadedStyleInstance != null) {
+            enableUserLocation(context, loadedMapInstance!!, loadedStyleInstance!!)
+        }
+    }
+    LaunchedEffect(Unit) {
+        if (!isPermissionGranted) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
     val mapView = remember {
         MapLibre.getInstance(context.applicationContext)
 
@@ -128,6 +204,10 @@ fun MapLibreView(
                         )
 
                         style.addLayer(fogLayer)
+
+                        if (hasLocationPermission(context)) {
+                            enableUserLocation(context, map, style)
+                        }
                     }
                 }
             }
