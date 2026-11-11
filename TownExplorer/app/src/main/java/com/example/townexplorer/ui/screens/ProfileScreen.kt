@@ -60,7 +60,7 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // User Name
+        // Username
         Text(
             text = "$firstName $lastName",
             style = MaterialTheme.typography.titleLarge
