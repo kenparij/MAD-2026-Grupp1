@@ -75,7 +75,7 @@ fun NavigationBar(modifier: Modifier = Modifier) {
                 }
             }
         }
-    ) { contentPadding ->
-        AppNavHost(navController, startDestination, modifier = Modifier.padding(contentPadding))
+    ) { innerPadding ->
+        AppNavHost(navController, startDestination, modifier = Modifier.padding(innerPadding))
     }
 }

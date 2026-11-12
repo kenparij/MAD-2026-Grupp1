@@ -40,7 +40,8 @@ fun AppNavHost(
 
     NavHost(
         navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        modifier = modifier
     ) {
 
         // ---- Auth flow ----
