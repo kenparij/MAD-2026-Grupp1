@@ -2,21 +2,28 @@ package com.example.townexplorer.ui.navigation
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.townexplorer.data.AuthError
+import com.example.townexplorer.data.AuthRepository
+import com.example.townexplorer.data.UserProfile
+import com.example.townexplorer.data.UserRepository
 import com.example.townexplorer.ui.screens.ForgotPasswordScreen
 import com.example.townexplorer.ui.screens.HomeScreen
 import com.example.townexplorer.ui.screens.LoginScreen
 import com.example.townexplorer.ui.screens.ProfileScreen
 import com.example.townexplorer.ui.screens.QuestsScreen
 import com.example.townexplorer.ui.screens.SignUpScreen
+import kotlinx.coroutines.launch
 
 
 /**
@@ -37,6 +44,8 @@ fun AppNavHost(
 ) {
     // context is needed to show a Toast
     val context = LocalContext.current
+    // Scope for the Firebase calls
+    val scope = rememberCoroutineScope()
 
     NavHost(
         navController,
@@ -53,9 +62,11 @@ fun AppNavHost(
             // remember + mutableStateOf:
             //   Source: https://developer.android.com/develop/ui/compose/state
             var loginError by remember { mutableStateOf<String?>(null) }
+            var isLoading by remember { mutableStateOf(false) }
 
             LoginScreen(
                 errorMessage = loginError,
+                isLoading = isLoading,
 
                 // Clears the old error as soon as the user edits the e-mail or password.
                 onCredentialsChanged = { loginError = null },
@@ -65,12 +76,18 @@ fun AppNavHost(
                 // Android back button does not take the user back into the login flow.
                 //   Source: https://developer.android.com/guide/navigation/backstack
                 //   (Compose example `navigate("destination_b") { popUpTo("destination_a") { inclusive = true } }
-                onLogIn = { _, _ ->
-                    // TODO (placeholder): authenticate against backend first, and only navigate on
-                    // success (Firebase example: signInWithEmailAndPassword).
-                    //      Source: https://firebase.google.com/docs/reference/android/com/google/firebase/auth/FirebaseAuth
-                    navController.navigate(Destination.HOME.route) {
-                        popUpTo(AuthDestination.LOGIN.route) { inclusive = true }
+                onLogIn = { email, password ->
+                    scope.launch {
+                        isLoading = true
+                        val error = AuthRepository.signIn(email, password)
+                        isLoading = false
+                        if (error == null) {
+                            navController.navigate(Destination.HOME.route) {
+                                popUpTo(AuthDestination.LOGIN.route) { inclusive = true }
+                            }
+                        } else {
+                            loginError = error.message
+                        }
                     }
                 },
                 // "Clicks 'Forgot password?'" -> Forgot password screen.
@@ -86,42 +103,70 @@ fun AppNavHost(
             // remember + mutableStateOf:
             //   Source: https://developer.android.com/develop/ui/compose/state
             var signUpError by remember { mutableStateOf<String?>(null) }
+            var passwordError by remember { mutableStateOf<String?>(null) }
+            var isLoading by remember { mutableStateOf(false) }
 
             SignUpScreen(
                 errorMessage = signUpError,
+                passwordErrorMessage = passwordError,
+                isLoading = isLoading,
 
-                // Clears the old error as soon as the user edits the e-mail.
+                // Clears the old errors as soon as the user edits a field.
                 onEmailChanged = { signUpError = null },
-                onSignUp = { _, _ ->
-                    // TODO: call backend here (Firebase example: createUserWithEmailAndPassword).
-                    // If the e-mail is already registered (Firebase throws FirebaseAuthUserCollisionException,
-                    // https://itnext.io/android-firebase-authentication-email-and-password-login-b06980cf864a),
-                    // show error and stay on this screen:
-                    //     signUpError = "A user already exists that is using this e-mail"
-                    // On success (below) go back to the Log in screen.
-                    //
-                    // popBackStack(route, inclusive = false) pops everything above the Login screen and keeps
-                    // Login itself.
-                    //   Source: https://developer.android.com/guide/navigation/backstack
-                    //   ("Pop back to a particular destination")
-                    navController.popBackStack(AuthDestination.LOGIN.route, inclusive = false)
+                onPasswordChanged = { passwordError = null },
+                onSignUp = { email, password ->
+                    scope.launch {
+                        isLoading = true
+                        val error = AuthRepository.signUp(email, password)
+                        isLoading = false
+                        when (error) {
+                            // Account created -> back to the Log in screen.
+                            // popBackStack(route, inclusive = false) pops everything above the Login screen and
+                            // keeps Login itself.
+                            //   Source: https://developer.android.com/guide/navigation/backstack
+                            //   ("Pop back to a particular destination")
+                            null -> {
+                                Toast.makeText(context, "Account created. You can log in now.", Toast.LENGTH_SHORT)
+                                    .show()
+                                navController.popBackStack(AuthDestination.LOGIN.route, inclusive = false)
+                            }
+                            AuthError.WeakPassword -> passwordError = error.message
+                            else -> signUpError = error.message
+                        }
+                    }
                 }
             )
         }
 
         // Forgot password screen route.
         composable(AuthDestination.FORGOT_PASSWORD.route) {
+            var resetError by remember { mutableStateOf<String?>(null) }
+            var isLoading by remember { mutableStateOf(false) }
+
             ForgotPasswordScreen(
+                errorMessage = resetError,
+                isLoading = isLoading,
+                onEmailChanged = { resetError = null },
                 onSendResetLink = { email ->
-                    // TODO: actually send the reset e-mail via backend
-                    // (Firebase example: sendPasswordResetEmail).
-                    //
-                    // "Email is sent" -> back to the Log in screen. A Toast tells the user what
-                    // happened; it stays visible while the screen changes.
-                    //   Source: https://developer.android.com/guide/topics/ui/notifiers/toasts
-                    //   (Toast.makeText(context, text, duration).show())
-                    Toast.makeText(context, "Reset link sent to $email", Toast.LENGTH_SHORT).show()
-                    navController.popBackStack(AuthDestination.LOGIN.route, inclusive = false)
+                    scope.launch {
+                        isLoading = true
+                        val error = AuthRepository.sendPasswordReset(email)
+                        isLoading = false
+                        if (error == null) {
+                            // "Email is sent" -> back to the Log in screen. A Toast tells the user what
+                            // happened; it stays visible while the screen changes.
+                            //   Source: https://developer.android.com/guide/topics/ui/notifiers/toasts
+                            //   (Toast.makeText(context, text, duration).show())
+                            Toast.makeText(
+                                context,
+                                "If an account exists for $email, a reset link was sent",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            navController.popBackStack(AuthDestination.LOGIN.route, inclusive = false)
+                        } else {
+                            resetError = error.message
+                        }
+                    }
                 },
                 // "Back to login screen" link, same pop as above, without the Toast.
                 onBackToLogin = {
@@ -138,7 +183,27 @@ fun AppNavHost(
                 when (destination) {
                     Destination.QUESTS -> QuestsScreen()
                     Destination.HOME -> HomeScreen()
-                    Destination.PROFILE -> ProfileScreen("first", "last", "email")
+                    Destination.PROFILE -> {
+                        val user = AuthRepository.currentUser
+                        var profile by remember { mutableStateOf<UserProfile?>(null) }
+
+                        // Load the profile from Firestore
+                        LaunchedEffect(user?.uid) {
+                            if (user != null) profile = UserRepository.getProfile(user.uid)
+                        }
+
+                        ProfileScreen(
+                            displayName = profile?.displayName,
+                            email = profile?.email ?: user?.email.orEmpty(),
+                            onLogOut = {
+                                // Log out and clear the back stack
+                                AuthRepository.signOut()
+                                navController.navigate(AuthDestination.LOGIN.route) {
+                                    popUpTo(navController.graph.id) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }

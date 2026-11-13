@@ -10,9 +10,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.townexplorer.data.AuthRepository
 
 
 /**
@@ -24,11 +26,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 fun NavigationBar(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
 
-    // TODO: replace with a real "is there a saved session?" check.
-    // Source: https://firebase.google.com/docs/reference/android/com/google/firebase/auth/FirebaseAuth
-    val isLoggedIn = false
-    val startDestination =
-        if (isLoggedIn) Destination.HOME.route else AuthDestination.LOGIN.route
+    // Skip the login screen if the user is already logged in
+    val startDestination = remember {
+        if (AuthRepository.currentUser != null) Destination.HOME.route else AuthDestination.LOGIN.route
+    }
 
 
     // Observe the current destination to know which screen is showing.

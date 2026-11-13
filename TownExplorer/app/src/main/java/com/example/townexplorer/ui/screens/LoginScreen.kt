@@ -42,6 +42,7 @@ import com.example.townexplorer.ui.components.isValidEmail
  * @param errorMessage - backend "invalid credentials" message to show under the password field (null = none).
  * @param onCredentialsChanged - called whenever the e-mail or password text changes, so the caller can clear a
  *        stale errorMessage (the error should disappear once the user starts correcting the input).
+ * @param isLoading - disables "Log in" while a request is running.
  */
 @Composable
 fun LoginScreen(
@@ -49,7 +50,8 @@ fun LoginScreen(
     onForgotPassword: () -> Unit,
     onCreateAccount: () -> Unit,
     errorMessage: String? = null,
-    onCredentialsChanged: () -> Unit = {}
+    onCredentialsChanged: () -> Unit = {},
+    isLoading: Boolean = false
 ) {
     // rememberSaveable keeps what the user typed across configuration changes.
     //   Source: https://developer.android.com/develop/ui/compose/state
@@ -68,7 +70,7 @@ fun LoginScreen(
     // inputs are valid, reports the log-in event upward.
     val submit: () -> Unit = {
         submitted = true
-        if (isValidEmail(email.trim()) && password.isNotEmpty()) {
+        if (!isLoading && isValidEmail(email.trim()) && password.isNotEmpty()) {
             onLogIn(email.trim(), password)
         }
     }
@@ -135,7 +137,7 @@ fun LoginScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        AuthButton(text = "Log in", onClick = submit)
+        AuthButton(text = "Log in", onClick = submit, enabled = !isLoading)
         Spacer(modifier = Modifier.height(8.dp))
         TextButton(onClick = onCreateAccount) {
             Text("Create account")
