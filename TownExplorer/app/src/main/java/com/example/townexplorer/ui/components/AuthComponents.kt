@@ -192,16 +192,19 @@ fun AuthTextField(
  *
  * @param text - label of the button.
  * @param onClick - called when the button is pressed.
+ * @param enabled - false disables the button.
  */
 @Composable
 fun AuthButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
         modifier = modifier,
+        enabled = enabled,
         shape = RoundedCornerShape(8.dp)
     ) {
         Text(text)

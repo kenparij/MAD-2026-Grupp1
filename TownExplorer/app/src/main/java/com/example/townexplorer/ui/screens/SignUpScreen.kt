@@ -35,12 +35,18 @@ import com.example.townexplorer.ui.components.isValidEmail
  * @param onSignUp called with the trimmed e-mail and the password once both pass the basic checks.
  * @param errorMessage backend error to show under the e-mail field (null = none).
  * @param onEmailChanged called whenever the e-mail text changes, so the caller can clear a stale errorMessage.
+ * @param passwordErrorMessage backend error to show under the password field (null = none).
+ * @param onPasswordChanged called whenever the password text changes.
+ * @param isLoading disables "Sign up" while a request is running.
  */
 @Composable
 fun SignUpScreen(
     onSignUp: (email: String, password: String) -> Unit,
     errorMessage: String? = null,
-    onEmailChanged: () -> Unit = {}
+    onEmailChanged: () -> Unit = {},
+    passwordErrorMessage: String? = null,
+    onPasswordChanged: () -> Unit = {},
+    isLoading: Boolean = false
 ) {
     // rememberSaveable: see LoginScreen.kt for the source.
     var email by rememberSaveable { mutableStateOf("") }
@@ -60,7 +66,7 @@ fun SignUpScreen(
     // inputs are valid, reports the sign-up event upward.
     val submit: () -> Unit = {
         submitted = true
-        if (isValidEmail(email.trim()) && password.isNotEmpty()) {
+        if (!isLoading && isValidEmail(email.trim()) && password.isNotEmpty()) {
             onSignUp(email.trim(), password)
         }
     }
@@ -89,14 +95,17 @@ fun SignUpScreen(
         Spacer(modifier = Modifier.height(4.dp))
         AuthTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                onPasswordChanged()
+            },
             label = "password",
             isPassword = true,
-            errorMessage = passwordError,
+            errorMessage = passwordError ?: passwordErrorMessage,
             onDone = submit
         )
 
         Spacer(modifier = Modifier.height(40.dp))
-        AuthButton(text = "Sign up", onClick = submit)
+        AuthButton(text = "Sign up", onClick = submit, enabled = !isLoading)
     }
 }

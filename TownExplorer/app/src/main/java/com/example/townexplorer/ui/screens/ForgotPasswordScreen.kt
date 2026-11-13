@@ -29,11 +29,17 @@ import com.example.townexplorer.ui.components.isValidEmail
  *
  * @param onSendResetLink - called with the trimmed e-mail once it passes the basic format check.
  * @param onBackToLogin - called when "Back to login screen" is pressed.
+ * @param errorMessage - backend error to show under the e-mail field (null = none).
+ * @param onEmailChanged - called whenever the e-mail text changes.
+ * @param isLoading - disables "Send reset link" while a request is running.
  */
 @Composable
 fun ForgotPasswordScreen(
     onSendResetLink: (email: String) -> Unit,
-    onBackToLogin: () -> Unit
+    onBackToLogin: () -> Unit,
+    errorMessage: String? = null,
+    onEmailChanged: () -> Unit = {},
+    isLoading: Boolean = false
 ) {
     // rememberSaveable: see LoginScreen.kt for the source.
     var email by rememberSaveable { mutableStateOf("") }
@@ -47,7 +53,7 @@ fun ForgotPasswordScreen(
     // if the e-mail looks valid, reports the send-reset-link event upward.
     val submit: () -> Unit = {
         submitted = true
-        if (isValidEmail(email.trim())) {
+        if (!isLoading && isValidEmail(email.trim())) {
             onSendResetLink(email.trim())
         }
     }
@@ -55,13 +61,16 @@ fun ForgotPasswordScreen(
     AuthScreenLayout(title = "Forgot password") {
         AuthTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                onEmailChanged()
+            },
             label = "e-mail",
-            errorMessage = emailError,
+            errorMessage = emailError ?: errorMessage,
             onDone = submit
         )
         Spacer(modifier = Modifier.height(40.dp))
-        AuthButton(text = "Send reset link", onClick = submit)
+        AuthButton(text = "Send reset link", onClick = submit, enabled = !isLoading)
         Spacer(modifier = Modifier.height(8.dp))
         // TextButton: low-emphasis action (see LoginScreen.kt for sources).
         TextButton(onClick = onBackToLogin) {

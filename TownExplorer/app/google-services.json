@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1000336812586",
+    "project_id": "townexplorer-mad",
+    "storage_bucket": "townexplorer-mad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1000336812586:android:c45fb3015ccd8975eff153",
+        "android_client_info": {
+          "package_name": "com.example.townexplorer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDz2lZVKdJadpzHhDaaFqmHhIJSMgwhwCc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
