@@ -137,9 +137,7 @@ fun enableUserLocation(
         val uid = AuthRepository.currentUser?.uid
         Log.d("MapLibreView", "Initial fog revealed ${revealResult.newCells.size} cells. User UID: $uid")
         if (uid != null) {
-            coroutineScope.launch {
-                UserRepository.saveVisitedTiles(uid, revealResult.newCells)
-            }
+            UserRepository.queueVisitedTiles(uid, revealResult.newCells, coroutineScope)
         } else {
             Log.w("MapLibreView", "User is not logged in! Visited tiles will not be saved to Firestore until logged in.")
         }
@@ -158,9 +156,7 @@ fun enableUserLocation(
 
         val uid = AuthRepository.currentUser?.uid
         if (uid != null) {
-            coroutineScope.launch {
-                UserRepository.saveVisitedTiles(uid, revealResult.newCells)
-            }
+            UserRepository.queueVisitedTiles(uid, revealResult.newCells, coroutineScope)
         }
     }
 
@@ -273,6 +269,12 @@ fun MapLibreView(
         onDispose {
             activeLocationListener?.let { listener ->
                 locationManager.removeUpdates(listener)
+            }
+            val uid = AuthRepository.currentUser?.uid
+            if (uid != null) {
+                coroutineScope.launch {
+                    UserRepository.flushVisitedTilesNow(uid)
+                }
             }
             lifecycleOwner.lifecycle.removeObserver(observer)
             mapView.onDestroy()

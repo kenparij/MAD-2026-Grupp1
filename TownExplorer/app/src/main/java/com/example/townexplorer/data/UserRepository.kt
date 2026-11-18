@@ -9,6 +9,13 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.tasks.await
 
+import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Source
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 /**
  * A document in the Firestore `users` collection (document id = the user's uid).
  */
@@ -25,9 +32,13 @@ data class UserProfile(
 object UserRepository {
 
     private const val TAG = "UserRepository"
+    private const val FLUSH_INTERVAL_MS = 10_000L // 10 seconds debounce interval
 
     private val users: CollectionReference
         get() = Firebase.firestore.collection("users")
+
+    private val pendingTilesBuffer = mutableSetOf<Pair<Int, Int>>()
+    private var flushJob: Job? = null
 
     suspend fun createProfile(uid: String, email: String) {
         val profile = mapOf(
@@ -48,27 +59,82 @@ object UserRepository {
         }
     }
 
+    private fun parseTilesFromSnapshot(snapshot: QuerySnapshot): Set<Pair<Int, Int>> {
+        return snapshot.documents.mapNotNull { doc ->
+            val x = doc.getLong("x")?.toInt()
+            val y = doc.getLong("y")?.toInt()
+            if (x != null && y != null) Pair(x, y) else null
+        }.toSet()
+    }
+
     /**
-     * Fetches all visited tiles for a user from Firestore (users/{uid}/visited_tiles).
+     * Fetches visited tiles for a user from Firestore (offline-first).
+     * Reads from local cache first for instant startup, then updates from server.
      */
     suspend fun getVisitedTiles(uid: String): Set<Pair<Int, Int>> {
         return try {
-            Log.d(TAG, "Fetching visited tiles from Firestore for user: $uid")
-            val snapshot = users.document(uid)
+            Log.d(TAG, "Fetching visited tiles (offline-first) for user: $uid")
+
+            // Step 1: Read from local cache for instant UI rendering
+            val cacheSnapshot = try {
+                users.document(uid)
+                    .collection("visited_tiles")
+                    .get(Source.CACHE)
+                    .await()
+            } catch (_: Exception) {
+                null
+            }
+
+            val cachedTiles = if (cacheSnapshot != null) parseTilesFromSnapshot(cacheSnapshot) else emptySet()
+            if (cachedTiles.isNotEmpty()) {
+                Log.d(TAG, "Instantly loaded ${cachedTiles.size} tiles from local Firestore cache for user $uid")
+            }
+
+            // Step 2: Fetch default (server/network) in background to pick up remote updates
+            val defaultSnapshot = users.document(uid)
                 .collection("visited_tiles")
-                .get()
+                .get(Source.DEFAULT)
                 .await()
 
-            val tiles = snapshot.documents.mapNotNull { doc ->
-                val x = doc.getLong("x")?.toInt()
-                val y = doc.getLong("y")?.toInt()
-                if (x != null && y != null) Pair(x, y) else null
-            }.toSet()
-            Log.d(TAG, "Loaded ${tiles.size} visited tiles from Firestore for user $uid")
-            tiles
+            val remoteTiles = parseTilesFromSnapshot(defaultSnapshot)
+            Log.d(TAG, "Synced ${remoteTiles.size} visited tiles from Firestore for user $uid")
+            remoteTiles.ifEmpty { cachedTiles }
         } catch (e: FirebaseFirestoreException) {
             Log.e(TAG, "Could not load visited tiles for user $uid. Ensure firestore.rules are published!", e)
             emptySet()
+        }
+    }
+
+    /**
+     * Buffers newly discovered tiles and schedules a debounced batch sync after 10 seconds.
+     */
+    fun queueVisitedTiles(uid: String, newTiles: Set<Pair<Int, Int>>, coroutineScope: CoroutineScope) {
+        if (newTiles.isEmpty()) return
+        synchronized(pendingTilesBuffer) {
+            pendingTilesBuffer.addAll(newTiles)
+            Log.d(TAG, "Buffered ${newTiles.size} new tiles. Total pending in buffer: ${pendingTilesBuffer.size}")
+        }
+
+        if (flushJob == null || flushJob?.isCompleted == true) {
+            flushJob = coroutineScope.launch {
+                delay(FLUSH_INTERVAL_MS)
+                flushVisitedTilesNow(uid)
+            }
+        }
+    }
+
+    /**
+     * Immediately flushes all pending tiles in the buffer to Cloud Firestore.
+     */
+    suspend fun flushVisitedTilesNow(uid: String) {
+        val tilesToSave = synchronized(pendingTilesBuffer) {
+            val copy = pendingTilesBuffer.toSet()
+            pendingTilesBuffer.clear()
+            copy
+        }
+        if (tilesToSave.isNotEmpty()) {
+            Log.d(TAG, "Flushing ${tilesToSave.size} buffered tiles to Firestore...")
+            saveVisitedTiles(uid, tilesToSave)
         }
     }
 
