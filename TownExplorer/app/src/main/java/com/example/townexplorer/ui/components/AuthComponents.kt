@@ -33,10 +33,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 
-// ================================================================================================
 // Shared UI pieces for the Login, Sign up and Forgot password screens, so the three screens look
 // identical.
-// ===============================================================================================
 
 /**
  * Width of the fields, title and buttons as a fraction of the screen width.

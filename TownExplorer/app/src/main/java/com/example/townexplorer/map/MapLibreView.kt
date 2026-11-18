@@ -86,10 +86,10 @@ fun hasLocationPermission(context: Context): Boolean {
     return fineGranted || coarseGranted
 }
 /**
- *Activates the blue location puck,
+ * Activates the blue location puck,
  * immediately positions it and clears fog using the device's cached location
  * and registers a LocationListener to update both the puck and the fog as the user moves.
- * Source: https://developer.android.com/reference/android/location/LocationManager
+ *      Source: https://developer.android.com/reference/android/location/LocationManager
  */
 @SuppressLint("MissingPermission")
 fun enableUserLocation(
