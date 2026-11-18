@@ -48,15 +48,21 @@ import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapLibreMap
 import android.util.Log
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import com.example.townexplorer.data.AuthRepository
+import com.example.townexplorer.data.PointOfInterest
 import com.example.townexplorer.data.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.Point
 
 
 private const val MAP_STYLE_URL =
@@ -176,6 +182,17 @@ fun enableUserLocation(
     return locationListener
 }
 
+private fun poisToFeatureCollection(pois: List<PointOfInterest>): FeatureCollection {
+    val features = pois.map { poi ->
+        Feature.fromGeometry(
+            Point.fromLngLat(poi.location.longitude, poi.location.latitude)
+        ).apply {
+            addStringProperty("poi_id", poi.id)
+        }
+    }
+    return FeatureCollection.fromFeatures(features)
+}
+
 
 /**
  * Displays the MapLibre map inside the Home screen.
@@ -189,8 +206,13 @@ fun enableUserLocation(
 
 @Composable
 fun MapLibreView(
+    pois: List<PointOfInterest> = emptyList(),
+    onPoiClick: (PointOfInterest) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val currentPois by rememberUpdatedState(pois)
+    val currentOnPoiClick by rememberUpdatedState(onPoiClick)
+
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
@@ -240,6 +262,12 @@ fun MapLibreView(
         } else {
             Log.d("MapLibreView", "Skipped loading tiles: uid=$uid, styleLoaded=${style != null}")
         }
+    }
+
+    LaunchedEffect(pois, loadedStyleInstance) {
+        loadedStyleInstance
+            ?.getSourceAs<GeoJsonSource>("poi-source")
+            ?.setGeoJson(poisToFeatureCollection(pois))
     }
 
     val mapView = remember {
@@ -297,7 +325,7 @@ fun MapLibreView(
 
                         map.uiSettings.apply {
                             isCompassEnabled = true
-                            setCompassFadeFacingNorth(false)
+                            setCompassFadeFacingNorth(true)
                             compassGravity = Gravity.BOTTOM or Gravity.START
                             val density = resources.displayMetrics.density
                             setCompassMargins(
@@ -326,6 +354,17 @@ fun MapLibreView(
                             )
                             style.addLayer(fogLayer)
 
+                            val poiSource = GeoJsonSource("poi-source", poisToFeatureCollection(currentPois))
+                            style.addSource(poiSource)
+
+                            val poiLayer = CircleLayer("poi-layer", "poi-source").withProperties(
+                                PropertyFactory.circleRadius(9f),
+                                PropertyFactory.circleColor("#F59E0B"),
+                                PropertyFactory.circleStrokeWidth(2.5f),
+                                PropertyFactory.circleStrokeColor("#FFFFFF")
+                            )
+                            style.addLayer(poiLayer)
+
                             if (hasLocationPermission(context) && activeLocationListener == null) {
                                 activeLocationListener = enableUserLocation(
                                     context = context,
@@ -334,6 +373,21 @@ fun MapLibreView(
                                     locationManager = locationManager,
                                     coroutineScope = coroutineScope
                                 )
+                            }
+                            
+                            map.addOnMapClickListener { latLng ->
+                                val screenPoint = map.projection.toScreenLocation(latLng)
+                                val features = map.queryRenderedFeatures(screenPoint, "poi-layer")
+
+                                val clickedId = features.firstOrNull()?.getStringProperty("poi_id")
+                                val clickedPoi = currentPois.find { it.id == clickedId }
+
+                                if (clickedPoi != null) {
+                                    currentOnPoiClick(clickedPoi)
+                                    true
+                                } else {
+                                    false
+                                }
                             }
                         }
                     }

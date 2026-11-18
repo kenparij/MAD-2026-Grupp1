@@ -10,6 +10,7 @@ import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.tasks.await
 
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -22,7 +23,8 @@ import kotlinx.coroutines.launch
 data class UserProfile(
     val email: String = "",
     val displayName: String? = null,
-    val createdAt: Timestamp? = null
+    val createdAt: Timestamp? = null,
+    val visitedPoiIds: List<String> = emptyList()
 )
 
 /**
@@ -44,7 +46,8 @@ object UserRepository {
         val profile = mapOf(
             "email" to email,
             "displayName" to null,
-            "createdAt" to FieldValue.serverTimestamp()
+            "createdAt" to FieldValue.serverTimestamp(),
+            "visitedPoiIds" to emptyList<String>()
         )
         users.document(uid).set(profile).await()
     }
@@ -57,6 +60,15 @@ object UserRepository {
             Log.w(TAG, "Could not load the user profile", e)
             null
         }
+    }
+
+    suspend fun markPoiVisited(uid: String, poiId: String) {
+        users.document(uid)
+            .set(
+                mapOf("visitedPoiIds" to FieldValue.arrayUnion(poiId)),
+                SetOptions.merge()
+            )
+            .await()
     }
 
     private fun parseTilesFromSnapshot(snapshot: QuerySnapshot): Set<Pair<Int, Int>> {

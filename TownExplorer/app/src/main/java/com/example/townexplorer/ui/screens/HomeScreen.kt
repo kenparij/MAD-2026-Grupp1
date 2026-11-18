@@ -29,7 +29,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.townexplorer.data.PoiRepository
+import com.example.townexplorer.data.PointOfInterest
 import com.example.townexplorer.map.MapLibreView
 
 
@@ -41,29 +45,28 @@ import com.example.townexplorer.map.MapLibreView
  */
 @Composable
 fun HomeScreen() {
-    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+    var pois by remember { mutableStateOf<List<PointOfInterest>>(emptyList()) }
+    var selectedPoi by remember { mutableStateOf<PointOfInterest?>(null) }
 
+    LaunchedEffect(Unit) {
+        pois = PoiRepository.getAllPois()
+    }
     Box(modifier = Modifier.fillMaxSize()) {
 
         // Displays the MapLibre map and fog overlay.
         MapLibreView(
+            pois = pois,
+            onPoiClick = { poi -> selectedPoi = poi },
             modifier = Modifier.fillMaxSize()
         )
-
-        // Opens the POI details bottom sheet.
-        Button(
-            onClick = { openBottomSheet = true },
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            Text(text = "POI")
-        }
     }
-
-    if (openBottomSheet) {
+    selectedPoi?.let { poi ->
         POIItem(
-            onDismissRequest = { openBottomSheet = false }
+            poi = poi,
+            onDismissRequest = { selectedPoi = null }
         )
     }
+
 }
 
 
@@ -74,6 +77,7 @@ fun HomeScreen() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun POIItem(
+    poi: PointOfInterest,
     onDismissRequest: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(
@@ -85,20 +89,26 @@ fun POIItem(
         sheetState = sheetState
     ) {
         Column(
-            modifier = Modifier.fillMaxHeight(0.75f)
+            modifier = Modifier
+                .fillMaxHeight(0.75f)
                 .padding(20.dp)
-        ){
-            Text(text = "Point of interest",
+        ) {
+            Text(
+                text = poi.name,
                 style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = poi.type,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
             )
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp),
                 thickness = 1.dp,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(30.dp))            //Image()
-            Text(text = "Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.")
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = poi.description)
         }
-
     }
 }
