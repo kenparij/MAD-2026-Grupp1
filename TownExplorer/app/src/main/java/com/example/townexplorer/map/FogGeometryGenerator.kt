@@ -17,8 +17,8 @@ import kotlin.math.sin
  * interior rings (holes) representing explored grid cells.
  *
  * Sources:
- * - https://maplibre.org/maplibre-native/android/examples/geojson-guide/
- * - https://maplibre.org/maplibre-native/android/examples/camera/lat-lng-bounds/
+ *      https://maplibre.org/maplibre-native/android/examples/geojson-guide/
+ *      https://maplibre.org/maplibre-native/android/examples/camera/lat-lng-bounds/
  */
 object FogGeometryGenerator {
 
