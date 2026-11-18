@@ -47,4 +47,50 @@ object UserRepository {
             null
         }
     }
+
+    /**
+     * Fetches all visited tiles for a user from Firestore (users/{uid}/visited_tiles).
+     */
+    suspend fun getVisitedTiles(uid: String): Set<Pair<Int, Int>> {
+        return try {
+            Log.d(TAG, "Fetching visited tiles from Firestore for user: $uid")
+            val snapshot = users.document(uid)
+                .collection("visited_tiles")
+                .get()
+                .await()
+
+            val tiles = snapshot.documents.mapNotNull { doc ->
+                val x = doc.getLong("x")?.toInt()
+                val y = doc.getLong("y")?.toInt()
+                if (x != null && y != null) Pair(x, y) else null
+            }.toSet()
+            Log.d(TAG, "Loaded ${tiles.size} visited tiles from Firestore for user $uid")
+            tiles
+        } catch (e: FirebaseFirestoreException) {
+            Log.e(TAG, "Could not load visited tiles for user $uid. Ensure firestore.rules are published!", e)
+            emptySet()
+        }
+    }
+
+    /**
+     * Saves newly visited tiles to Firestore under users/{uid}/visited_tiles in batches.
+     */
+    suspend fun saveVisitedTiles(uid: String, newTiles: Set<Pair<Int, Int>>) {
+        if (newTiles.isEmpty()) return
+        Log.d(TAG, "Saving ${newTiles.size} new visited tiles to Firestore for user $uid...")
+        try {
+            val collection = users.document(uid).collection("visited_tiles")
+            newTiles.chunked(400).forEach { chunk ->
+                val batch = Firebase.firestore.batch()
+                for ((x, y) in chunk) {
+                    val docRef = collection.document("${x}_$y")
+                    batch.set(docRef, mapOf("x" to x, "y" to y))
+                }
+                batch.commit().await()
+            }
+            Log.d(TAG, "Successfully saved ${newTiles.size} visited tiles to Firestore for user $uid")
+        } catch (e: FirebaseFirestoreException) {
+            Log.e(TAG, "Could not save visited tiles for user $uid. Ensure firestore.rules are published!", e)
+        }
+    }
 }

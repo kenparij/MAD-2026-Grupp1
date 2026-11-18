@@ -6,7 +6,6 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
 import org.maplibre.geojson.Polygon
-import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
 
@@ -46,6 +45,24 @@ object FogGeometryGenerator {
 
     private val visitedCells = mutableSetOf<Pair<Int, Int>>()
 
+    data class RevealResult(
+        val fogGeoJson: FeatureCollection,
+        val newCells: Set<Pair<Int, Int>>
+    )
+
+    fun setVisitedCells(cells: Set<Pair<Int, Int>>): FeatureCollection {
+        visitedCells.clear()
+        visitedCells.addAll(cells)
+        return getCurrentFog()
+    }
+
+    fun getVisitedCells(): Set<Pair<Int, Int>> {
+        return visitedCells.toSet()
+    }
+
+    fun clearVisitedCells() {
+        visitedCells.clear()
+    }
 
     // Builds and returns the full fog-of-war GeoJSON polygon, cutting out holes for every grid cell saved in visitedCells
     fun getCurrentFog(): FeatureCollection {
@@ -75,16 +92,16 @@ object FogGeometryGenerator {
     }
 
     /**
-     * Marks the grid cells around the user's coordinates as visited and returns the updated fog GeoJSON—or null if no new cells were entered
+     * Marks the grid cells around the user's coordinates as visited and returns the updated fog GeoJSON and newly visited cells—or null if no new cells were entered
      */
     fun revealFogAtLocation(
         latitude: Double,
         longitude: Double,
         revealRadiusCells: Int = 1
-    ): FeatureCollection? {
+    ): RevealResult? {
         val currentCellX = floor(longitude / GRID_SIZE_DEG).toInt()
         val currentCellY = floor(latitude / GRID_SIZE_DEG).toInt()
-        var hasNewCells = false
+        val newCells = mutableSetOf<Pair<Int, Int>>()
 
         for (dx in -revealRadiusCells..revealRadiusCells) {
             for (dy in -revealRadiusCells..revealRadiusCells) {
@@ -93,14 +110,18 @@ object FogGeometryGenerator {
 
                 if (!isCellInsideOuterBoundary(cellX, cellY)) continue
 
-                if (visitedCells.add(Pair(cellX, cellY))) {
-                    hasNewCells = true
+                val cell = Pair(cellX, cellY)
+                if (visitedCells.add(cell)) {
+                    newCells.add(cell)
                 }
             }
         }
 
-        if (!hasNewCells) return null
-        return getCurrentFog()
+        if (newCells.isEmpty()) return null
+        return RevealResult(
+            fogGeoJson = getCurrentFog(),
+            newCells = newCells
+        )
     }
 
     //Checks that a grid cell lies strictly inside the outer fog boundary

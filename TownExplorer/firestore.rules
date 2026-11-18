@@ -36,6 +36,11 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email', 'createdAt']);
 
       allow list, delete: if false;
+
+      // Visited tiles subcollection for user fog-of-war
+      match /visited_tiles/{tileId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     // Everything else is denied

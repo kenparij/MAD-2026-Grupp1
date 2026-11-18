@@ -5,7 +5,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Looper
@@ -47,6 +46,12 @@ import org.maplibre.android.location.LocationComponentOptions
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapLibreMap
+import android.util.Log
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.townexplorer.data.AuthRepository
+import com.example.townexplorer.data.UserRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.FillLayer
@@ -85,7 +90,8 @@ fun enableUserLocation(
     context: Context,
     map: MapLibreMap,
     style: Style,
-    locationManager: LocationManager
+    locationManager: LocationManager,
+    coroutineScope: CoroutineScope
 ): LocationListener? {
     if (!hasLocationPermission(context)) return null
 
@@ -108,27 +114,54 @@ fun enableUserLocation(
         .mapNotNull { providerName -> locationManager.getLastKnownLocation(providerName) }
         .maxByOrNull { it.time }
 
-    lastKnownLocation?.let { location ->
-        locationComponent.forceLocationUpdate(location)
+    val initialLat = lastKnownLocation?.latitude ?: TARTU_CENTER.latitude
+    val initialLng = lastKnownLocation?.longitude ?: TARTU_CENTER.longitude
+
+    lastKnownLocation?.let { locationComponent.forceLocationUpdate(it) }
+
+    val initialReveal = FogGeometryGenerator.revealFogAtLocation(
+        latitude = initialLat,
+        longitude = initialLng,
+        revealRadiusCells = 1
+    ) ?: if (lastKnownLocation != null) {
+        // Fallback to TARTU_CENTER if lastKnownLocation is outside bounds (e.g. default emulator location)
         FogGeometryGenerator.revealFogAtLocation(
-            latitude = location.latitude,
-            longitude = location.longitude,
+            latitude = TARTU_CENTER.latitude,
+            longitude = TARTU_CENTER.longitude,
             revealRadiusCells = 1
-        )?.let { updatedFog ->
-            style.getSourceAs<GeoJsonSource>("fog-source")?.setGeoJson(updatedFog)
+        )
+    } else null
+
+    initialReveal?.let { revealResult ->
+        style.getSourceAs<GeoJsonSource>("fog-source")?.setGeoJson(revealResult.fogGeoJson)
+        val uid = AuthRepository.currentUser?.uid
+        Log.d("MapLibreView", "Initial fog revealed ${revealResult.newCells.size} cells. User UID: $uid")
+        if (uid != null) {
+            coroutineScope.launch {
+                UserRepository.saveVisitedTiles(uid, revealResult.newCells)
+            }
+        } else {
+            Log.w("MapLibreView", "User is not logged in! Visited tiles will not be saved to Firestore until logged in.")
         }
     }
 
     val locationListener = LocationListener { location ->
         locationComponent.forceLocationUpdate(location)
 
-        val updatedFogGeoJson = FogGeometryGenerator.revealFogAtLocation(
+        val revealResult = FogGeometryGenerator.revealFogAtLocation(
             latitude = location.latitude,
             longitude = location.longitude,
             revealRadiusCells = 1
         ) ?: return@LocationListener
 
-        style.getSourceAs<GeoJsonSource>("fog-source")?.setGeoJson(updatedFogGeoJson)
+        style.getSourceAs<GeoJsonSource>("fog-source")?.setGeoJson(revealResult.fogGeoJson)
+
+        val uid = AuthRepository.currentUser?.uid
+        if (uid != null) {
+            coroutineScope.launch {
+                UserRepository.saveVisitedTiles(uid, revealResult.newCells)
+            }
+        }
     }
 
     val provider = when {
@@ -164,6 +197,8 @@ fun MapLibreView(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
+    val currentUser = AuthRepository.currentUser
 
     val locationManager = remember {
         context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -183,7 +218,7 @@ fun MapLibreView(
         val map = loadedMapInstance
         val style = loadedStyleInstance
         if (isPermissionGranted && map != null && style != null && activeLocationListener == null) {
-            activeLocationListener = enableUserLocation(context, map, style, locationManager)
+            activeLocationListener = enableUserLocation(context, map, style, locationManager, coroutineScope)
         }
     }
 
@@ -195,6 +230,19 @@ fun MapLibreView(
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 )
             )
+        }
+    }
+
+    LaunchedEffect(currentUser?.uid, loadedStyleInstance) {
+        val uid = currentUser?.uid
+        val style = loadedStyleInstance
+        if (uid != null && style != null) {
+            Log.d("MapLibreView", "Loading visited tiles from Firestore for user: $uid")
+            val savedTiles = UserRepository.getVisitedTiles(uid)
+            val updatedFog = FogGeometryGenerator.setVisitedCells(savedTiles)
+            style.getSourceAs<GeoJsonSource>("fog-source")?.setGeoJson(updatedFog)
+        } else {
+            Log.d("MapLibreView", "Skipped loading tiles: uid=$uid, styleLoaded=${style != null}")
         }
     }
 
@@ -281,7 +329,8 @@ fun MapLibreView(
                                     context = context,
                                     map = map,
                                     style = style,
-                                    locationManager = locationManager
+                                    locationManager = locationManager,
+                                    coroutineScope = coroutineScope
                                 )
                             }
                         }
