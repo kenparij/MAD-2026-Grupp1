@@ -1,6 +1,12 @@
 package com.example.townexplorer.ui.navigation
 
 import android.widget.Toast
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,6 +31,9 @@ import com.example.townexplorer.ui.screens.QuestsScreen
 import com.example.townexplorer.ui.screens.SignUpScreen
 import kotlinx.coroutines.launch
 
+// Screen fade duration
+private const val TRANSITION_MILLIS = 250
+
 
 /**
  * Defines how users navigate between different screens and determines which screen to display based on the current route.
@@ -47,10 +56,16 @@ fun AppNavHost(
     // Scope for the Firebase calls
     val scope = rememberCoroutineScope()
 
+    // Only the top screen fades, the one below stays visible. The default fades both at once which flickered.
+    //   Source: https://developer.android.com/guide/navigation/use-graph/animate-transitions
     NavHost(
         navController,
         startDestination = startDestination,
-        modifier = modifier
+        modifier = modifier,
+        enterTransition = { fadeIn(tween(TRANSITION_MILLIS, easing = FastOutSlowInEasing)) },
+        exitTransition = { fadeOut(snap(delayMillis = TRANSITION_MILLIS)) },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { fadeOut(tween(TRANSITION_MILLIS, easing = FastOutSlowInEasing)) }
     ) {
 
         // ---- Auth flow ----

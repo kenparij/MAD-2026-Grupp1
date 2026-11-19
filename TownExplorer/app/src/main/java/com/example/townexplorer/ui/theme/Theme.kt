@@ -49,6 +49,7 @@ fun TownExplorerTheme(
 //        darkTheme -> DarkColorScheme
 //        else -> LightColorScheme
 //    }
+    // Always use the light theme
     val colorScheme = LightColorScheme
 
     MaterialTheme(
