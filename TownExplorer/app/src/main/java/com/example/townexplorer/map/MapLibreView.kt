@@ -8,7 +8,6 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Looper
 import android.view.Gravity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -199,7 +198,7 @@ fun enableUserLocation(
     return locationListener
 }
 
-//translates Kotlin List<PointOfInterest> into a GeoJSON FeatureCollection
+// translates Kotlin List<PointOfInterest> into a GeoJSON FeatureCollection
 private fun poisToFeatureCollection(pois: List<PointOfInterest>, visitedIds: Set<String>): FeatureCollection {
     val features = pois.map { poi ->
         val isVisited = poi.id in visitedIds
@@ -216,7 +215,7 @@ private fun poisToFeatureCollection(pois: List<PointOfInterest>, visitedIds: Set
     return FeatureCollection.fromFeatures(features)
 }
 
-//maps POI types to hex colors
+// maps POI types to hex colors
 private fun colorHexForPoiType(type: String): String {
     return when (type.uppercase()) {
         "LANDMARK" -> "#F59E0B"
@@ -228,6 +227,7 @@ private fun colorHexForPoiType(type: String): String {
     }
 }
 
+// checks if any point of interest is near current location
 private fun checkNearbyPois(
     userLat: Double,
     userLng: Double,
