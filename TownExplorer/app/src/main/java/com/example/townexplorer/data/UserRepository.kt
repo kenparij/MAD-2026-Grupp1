@@ -71,6 +71,17 @@ object UserRepository {
             .await()
     }
 
+    suspend fun getVisitedPoiIds(uid: String): Set<String> {
+        return try {
+            val snapshot = users.document(uid).get().await()
+            val ids = snapshot.get("visitedPoiIds") as? List<*>
+            ids?.filterIsInstance<String>()?.toSet() ?: emptySet()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch visited POI IDs", e)
+            emptySet()
+        }
+    }
+
     private fun parseTilesFromSnapshot(snapshot: QuerySnapshot): Set<Pair<Int, Int>> {
         return snapshot.documents.mapNotNull { doc ->
             val x = doc.getLong("x")?.toInt()

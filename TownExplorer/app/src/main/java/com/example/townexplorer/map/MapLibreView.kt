@@ -5,6 +5,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Looper
@@ -52,6 +53,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import com.example.townexplorer.data.AuthRepository
 import com.example.townexplorer.data.PointOfInterest
 import com.example.townexplorer.data.UserRepository
+import org.maplibre.android.style.expressions.Expression
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.maps.MapView
@@ -70,6 +72,8 @@ private const val MAP_STYLE_URL =
 
 // Approximate centre of Tartu
 private val TARTU_CENTER = LatLng(58.379, 26.724)
+
+private const val POI_DISCOVERY_RADIUS_METERS = 20f
 
 //Returns true if the user has granted either fine (GPS) or coarse (network) location permission.
 fun hasLocationPermission(context: Context): Boolean {
@@ -96,6 +100,9 @@ fun enableUserLocation(
     context: Context,
     map: MapLibreMap,
     style: Style,
+    getPois: () -> List<PointOfInterest>,
+    getVisitedIds: () -> Set<String>,
+    onPoiVisited: (PointOfInterest) -> Unit,
     locationManager: LocationManager,
     coroutineScope: CoroutineScope
 ): LocationListener? {
@@ -130,7 +137,7 @@ fun enableUserLocation(
         longitude = initialLng,
         revealRadiusCells = 1
     ) ?: if (lastKnownLocation != null) {
-        // Fallback to TARTU_CENTER if lastKnownLocation is outside bounds (e.g. default emulator location)
+        // Fallback to TARTU_CENTER if lastKnownLocation is outside bounds
         FogGeometryGenerator.revealFogAtLocation(
             latitude = TARTU_CENTER.latitude,
             longitude = TARTU_CENTER.longitude,
@@ -149,6 +156,9 @@ fun enableUserLocation(
         }
     }
 
+    checkNearbyPois(initialLat, initialLng, getPois(), getVisitedIds(), onPoiVisited)
+
+
     val locationListener = LocationListener { location ->
         locationComponent.forceLocationUpdate(location)
 
@@ -164,6 +174,13 @@ fun enableUserLocation(
         if (uid != null) {
             UserRepository.queueVisitedTiles(uid, revealResult.newCells, coroutineScope)
         }
+        checkNearbyPois(
+            userLat = location.latitude,
+            userLng = location.longitude,
+            pois = getPois(),
+            visitedIds = getVisitedIds(),
+            onPoiVisited = onPoiVisited
+        )
     }
 
     val provider = when {
@@ -182,15 +199,58 @@ fun enableUserLocation(
     return locationListener
 }
 
-private fun poisToFeatureCollection(pois: List<PointOfInterest>): FeatureCollection {
+//translates Kotlin List<PointOfInterest> into a GeoJSON FeatureCollection
+private fun poisToFeatureCollection(pois: List<PointOfInterest>, visitedIds: Set<String>): FeatureCollection {
     val features = pois.map { poi ->
+        val isVisited = poi.id in visitedIds
         Feature.fromGeometry(
             Point.fromLngLat(poi.location.longitude, poi.location.latitude)
         ).apply {
             addStringProperty("poi_id", poi.id)
+            addStringProperty(
+                "poi_color",
+                if (isVisited) "#6B7280" else colorHexForPoiType(poi.type)
+            )
         }
     }
     return FeatureCollection.fromFeatures(features)
+}
+
+//maps POI types to hex colors
+private fun colorHexForPoiType(type: String): String {
+    return when (type.uppercase()) {
+        "LANDMARK" -> "#F59E0B"
+        "MUSEUM"   -> "#3B82F6"
+        "PARK"     -> "#10B981"
+        "CAFÉ"     -> "#EC4899"
+        "CULTURE"  -> "#8B5CF6"
+        else       -> "#F59E0B"
+    }
+}
+
+private fun checkNearbyPois(
+    userLat: Double,
+    userLng: Double,
+    pois: List<PointOfInterest>,
+    visitedIds: Set<String>,
+    onPoiVisited: (PointOfInterest) -> Unit
+) {
+    val distanceResult = FloatArray(1)
+    for (poi in pois) {
+        if (poi.id in visitedIds) continue
+
+        Location.distanceBetween(
+            userLat,
+            userLng,
+            poi.location.latitude,
+            poi.location.longitude,
+            distanceResult
+        )
+
+        if (distanceResult[0] <= POI_DISCOVERY_RADIUS_METERS) {
+            onPoiVisited(poi)
+        }
+    }
 }
 
 
@@ -207,11 +267,15 @@ private fun poisToFeatureCollection(pois: List<PointOfInterest>): FeatureCollect
 @Composable
 fun MapLibreView(
     pois: List<PointOfInterest> = emptyList(),
+    visitedPoiIds: Set<String> = emptySet(),
     onPoiClick: (PointOfInterest) -> Unit = {},
+    onPoiVisited: (PointOfInterest) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentPois by rememberUpdatedState(pois)
+    val currentVisitedIds by rememberUpdatedState(visitedPoiIds)
     val currentOnPoiClick by rememberUpdatedState(onPoiClick)
+    val currentOnPoiVisited by rememberUpdatedState(onPoiVisited)
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -236,7 +300,7 @@ fun MapLibreView(
         val map = loadedMapInstance
         val style = loadedStyleInstance
         if (isPermissionGranted && map != null && style != null && activeLocationListener == null) {
-            activeLocationListener = enableUserLocation(context, map, style, locationManager, coroutineScope)
+            activeLocationListener = enableUserLocation(context, map, style, {currentPois}, {currentVisitedIds}, {currentOnPoiVisited(it)}, locationManager, coroutineScope)
         }
     }
 
@@ -264,10 +328,10 @@ fun MapLibreView(
         }
     }
 
-    LaunchedEffect(pois, loadedStyleInstance) {
+    LaunchedEffect(pois, visitedPoiIds, loadedStyleInstance) {
         loadedStyleInstance
             ?.getSourceAs<GeoJsonSource>("poi-source")
-            ?.setGeoJson(poisToFeatureCollection(pois))
+            ?.setGeoJson(poisToFeatureCollection(pois, visitedPoiIds))
     }
 
     val mapView = remember {
@@ -354,12 +418,12 @@ fun MapLibreView(
                             )
                             style.addLayer(fogLayer)
 
-                            val poiSource = GeoJsonSource("poi-source", poisToFeatureCollection(currentPois))
+                            val poiSource = GeoJsonSource("poi-source", poisToFeatureCollection(currentPois, visitedPoiIds))
                             style.addSource(poiSource)
 
                             val poiLayer = CircleLayer("poi-layer", "poi-source").withProperties(
                                 PropertyFactory.circleRadius(9f),
-                                PropertyFactory.circleColor("#F59E0B"),
+                                PropertyFactory.circleColor(Expression.get("poi_color")),
                                 PropertyFactory.circleStrokeWidth(2.5f),
                                 PropertyFactory.circleStrokeColor("#FFFFFF")
                             )
@@ -370,6 +434,9 @@ fun MapLibreView(
                                     context = context,
                                     map = map,
                                     style = style,
+                                    getPois = { currentPois },
+                                    getVisitedIds = { currentVisitedIds },
+                                    onPoiVisited = { currentOnPoiVisited(it) },
                                     locationManager = locationManager,
                                     coroutineScope = coroutineScope
                                 )

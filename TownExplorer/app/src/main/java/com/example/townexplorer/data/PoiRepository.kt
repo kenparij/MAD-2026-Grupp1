@@ -27,6 +27,7 @@ object PoiRepository {
     private val pointsOfInterest: CollectionReference
         get() = Firebase.firestore.collection("points_of_interest")
 
+    //fetches all points of interest form the database
     suspend fun getAllPois(): List<PointOfInterest> {
         return try {
             pointsOfInterest.get()

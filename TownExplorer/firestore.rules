@@ -43,6 +43,11 @@ service cloud.firestore {
       }
     }
 
+    match /points_of_interest/{poiId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Everything else is denied
     match /{document=**} {
       allow read, write: if false;
