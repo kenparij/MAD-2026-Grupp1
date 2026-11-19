@@ -46,6 +46,7 @@ import org.maplibre.android.location.LocationComponentOptions
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapLibreMapOptions
 import android.util.Log
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -88,6 +89,16 @@ fun hasLocationPermission(context: Context): Boolean {
 
     return fineGranted || coarseGranted
 }
+
+// Newest cached location from any provider, null if there is none
+//   Source: https://developer.android.com/reference/android/location/LocationManager#getLastKnownLocation(java.lang.String)
+@SuppressLint("MissingPermission")
+private fun getLastKnownLocation(context: Context, locationManager: LocationManager): Location? {
+    if (!hasLocationPermission(context)) return null
+    return locationManager.getProviders(true)
+        .mapNotNull { providerName -> locationManager.getLastKnownLocation(providerName) }
+        .maxByOrNull { it.time }
+}
 /**
  * Activates the blue location puck,
  * immediately positions it and clears fog using the device's cached location
@@ -122,9 +133,7 @@ fun enableUserLocation(
     locationComponent.cameraMode = CameraMode.TRACKING
     locationComponent.renderMode = RenderMode.COMPASS
 
-    val lastKnownLocation = locationManager.getProviders(true)
-        .mapNotNull { providerName -> locationManager.getLastKnownLocation(providerName) }
-        .maxByOrNull { it.time }
+    val lastKnownLocation = getLastKnownLocation(context, locationManager)
 
     val initialLat = lastKnownLocation?.latitude ?: TARTU_CENTER.latitude
     val initialLng = lastKnownLocation?.longitude ?: TARTU_CENTER.longitude
@@ -336,7 +345,18 @@ fun MapLibreView(
 
     val mapView = remember {
         MapLibre.getInstance(context.applicationContext)
-        MapView(context).apply { onCreate(null) }
+        // textureMode so the map fades along with the screen transitions (SurfaceView doesn't)
+        //   Source: https://maplibre.org/maplibre-native/android/api/-map-libre%20-native%20-android/org.maplibre.android.maps/-map-libre-map-options/texture-mode.html
+        // Open the map at the last known location, so it doesn't have to pan there from Tartu centre
+        //   Source: https://maplibre.org/maplibre-native/android/api/-map-libre%20-native%20-android/org.maplibre.android.maps/-map-libre-map-options/camera.html
+        val startTarget = getLastKnownLocation(context, locationManager)
+            ?.let { LatLng(it.latitude, it.longitude) }
+            ?.takeIf { FogGeometryGenerator.PLAYABLE_BOUNDS.contains(it) }
+            ?: TARTU_CENTER
+        val options = MapLibreMapOptions.createFromAttributes(context)
+            .textureMode(true)
+            .camera(CameraPosition.Builder().target(startTarget).zoom(14.3).build())
+        MapView(context, options).apply { onCreate(null) }
     }
 
     DisposableEffect(mapView, lifecycleOwner) {
@@ -378,11 +398,7 @@ fun MapLibreView(
             factory = {
                 mapView.apply {
                     getMapAsync { map ->
-                        map.cameraPosition = CameraPosition.Builder()
-                            .target(TARTU_CENTER)
-                            .zoom(14.3)
-                            .build()
-
+                        // Start position is set in the options above
                         map.setLatLngBoundsForCameraTarget(FogGeometryGenerator.PLAYABLE_BOUNDS)
                         map.setMinZoomPreference(13.5)
                         map.setMaxZoomPreference(18.0)

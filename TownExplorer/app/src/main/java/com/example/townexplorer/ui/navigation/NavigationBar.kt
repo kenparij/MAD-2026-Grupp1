@@ -1,11 +1,15 @@
 package com.example.townexplorer.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.townexplorer.data.AuthRepository
+import com.example.townexplorer.ui.theme.PrimaryDark
 
 
 /**
@@ -51,7 +56,9 @@ fun NavigationBar(modifier: Modifier = Modifier) {
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            if (showBottomBar) {
+            // Fade the bar in/out after login and logout
+            //   Source: https://developer.android.com/develop/ui/compose/animation/composables-modifiers#animatedvisibility
+            AnimatedVisibility(visible = showBottomBar, enter = fadeIn(), exit = fadeOut()) {
                 NavigationBar(windowInsets = NavigationBarDefaults.windowInsets,
                     containerColor = MaterialTheme.colorScheme.primary,
                 ) {
@@ -59,8 +66,17 @@ fun NavigationBar(modifier: Modifier = Modifier) {
                         NavigationBarItem(
                             // Highlight the tab whose route is the one currently shown.
                             selected = currentRoute == destination.route,
+                            // Darker highlight for the selected tab
+                            colors = NavigationBarItemDefaults.colors(indicatorColor = PrimaryDark),
                             onClick = {
-                                navController.navigate(route = destination.route)
+                                navController.navigate(route = destination.route) {
+                                    // Don't pile up tabs in the back stack, and keep each tab's state
+                                    //   Source: https://developer.android.com/develop/ui/compose/navigation#bottom-nav
+                                    popUpTo(Destination.HOME.route) { saveState = true }
+                                    // Don't reload the tab if it's already open
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             },
                             icon = {
                                 Icon(
