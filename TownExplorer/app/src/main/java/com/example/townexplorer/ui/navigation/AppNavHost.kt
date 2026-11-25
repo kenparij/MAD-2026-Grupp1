@@ -21,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.townexplorer.data.AuthError
 import com.example.townexplorer.data.AuthRepository
+import com.example.townexplorer.data.PoiRepository
 import com.example.townexplorer.data.UserProfile
 import com.example.townexplorer.data.UserRepository
 import com.example.townexplorer.ui.screens.ForgotPasswordScreen
@@ -29,6 +30,7 @@ import com.example.townexplorer.ui.screens.LoginScreen
 import com.example.townexplorer.ui.screens.ProfileScreen
 import com.example.townexplorer.ui.screens.QuestsScreen
 import com.example.townexplorer.ui.screens.SignUpScreen
+import com.example.townexplorer.ui.screens.buildCategoryQuests
 import kotlinx.coroutines.launch
 
 // Screen fade duration
@@ -190,7 +192,7 @@ fun AppNavHost(
             )
         }
 
-        // ---- Main app ----
+        // Main app
         // Registers one route per bottom-bar Destination. `entries` is the list of all enum values:
         //   Source: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.enums/-enum-entries/
         Destination.entries.forEach { destination ->
@@ -198,20 +200,39 @@ fun AppNavHost(
                 when (destination) {
                     Destination.QUESTS -> QuestsScreen()
                     Destination.HOME -> HomeScreen()
+
+                    // Source:
+                    //      Side-effects in Compose: https://developer.android.com/develop/ui/compose/side-effects
+                    //      count API Reference: https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/count.html
                     Destination.PROFILE -> {
                         val user = AuthRepository.currentUser
                         var profile by remember { mutableStateOf<UserProfile?>(null) }
+                        var completedQuests by remember { mutableStateOf(0) }
+                        var totalQuests by remember { mutableStateOf(0) }
 
-                        // Load the profile from Firestore
+                        // Loads the profile and quest progress from Firestore
                         LaunchedEffect(user?.uid) {
-                            if (user != null) profile = UserRepository.getProfile(user.uid)
+                            if (user != null) {
+                                profile = UserRepository.getProfile(user.uid)
+                                val allPois = PoiRepository.getAllPois()
+                                val visitedPoiIds = UserRepository.getVisitedPoiIds(user.uid)
+                                val quests = buildCategoryQuests(allPois, visitedPoiIds)
+                                totalQuests = quests.size
+                                completedQuests = quests.count { it.isCompleted }
+                            } else {
+                                profile = null
+                                completedQuests = 0
+                                totalQuests = 0
+                            }
                         }
 
                         ProfileScreen(
                             displayName = profile?.displayName,
                             email = profile?.email ?: user?.email.orEmpty(),
+                            completedQuests = completedQuests,
+                            totalQuests = totalQuests,
                             onLogOut = {
-                                // Log out and clear the back stack
+                                // Logs out and clears the back stack
                                 AuthRepository.signOut()
                                 navController.navigate(AuthDestination.LOGIN.route) {
                                     popUpTo(navController.graph.id) { inclusive = true }

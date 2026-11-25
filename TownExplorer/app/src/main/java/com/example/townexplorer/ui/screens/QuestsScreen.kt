@@ -79,17 +79,9 @@ fun QuestsScreen() {
         }
     }
 
+    // Source: https://developer.android.com/develop/ui/compose/side-effects
     val quests = remember(pois, visitedPoiIds) {
-        pois.filter { it.type.isNotBlank() }
-            .groupBy { it.type.trim() }
-            .map { (type, poisInCategory) ->
-                CategoryQuest(
-                    type = type,
-                    pois = poisInCategory,
-                    visitedIds = visitedPoiIds
-                )
-            }
-            .sortedBy { it.type }
+        buildCategoryQuests(pois, visitedPoiIds)
     }
 
     Column(
@@ -208,4 +200,25 @@ fun DropdownMenu(
             }
         }
     }
+}
+
+// Takes a list of points of interest and a set of POI ID-s the user has visited,
+// and turns them into a sorted list of CategoryQuest objects
+// Source: https://kotlinlang.org/docs/collection-grouping.html
+//         https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/group-by.html
+//         https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/sorted-by.html
+fun buildCategoryQuests(
+    pois: List<PointOfInterest>,
+    visitedPoiIds: Set<String>
+): List<CategoryQuest> {
+    return pois.filter { it.type.isNotBlank() }
+        .groupBy { it.type.trim() }
+        .map { (type, poisInCategory) ->
+            CategoryQuest(
+                type = type,
+                pois = poisInCategory,
+                visitedIds = visitedPoiIds
+            )
+        }
+        .sortedBy { it.type }
 }
