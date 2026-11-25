@@ -49,6 +49,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation("org.maplibre.gl:android-sdk:13.7.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation("io.coil-kt.coil3:coil-compose:3.6.3")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)

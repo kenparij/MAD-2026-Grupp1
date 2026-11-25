@@ -15,6 +15,7 @@ data class PointOfInterest(
     val name: String = "",
     val description: String = "",
     val type: String = "",
+    val imageurl: String = "",
     val location: GeoPoint = GeoPoint(0.0, 0.0)
 ) {
     fun toLatLng(): LatLng = LatLng(location.latitude, location.longitude)

@@ -29,6 +29,11 @@ import com.example.townexplorer.data.PointOfInterest
 import com.example.townexplorer.data.UserRepository
 import com.example.townexplorer.map.MapLibreView
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 
 
 /**
@@ -97,7 +102,9 @@ fun HomeScreen() {
 
 /**
  * Displays an overlay bottom sheet on top of the active screen content.
- * Code example taken from: https://developer.android.com/reference/kotlin/androidx/compose/material3/ModalBottomSheet.composable
+ *      Code example taken from: https://developer.android.com/reference/kotlin/androidx/compose/material3/ModalBottomSheet.composable
+ *      Coil: https://coil-kt.github.io/coil/compose/
+ *      ModalBottomSheet: https://developer.android.com/reference/kotlin/androidx/compose/material3/ModalBottomSheet.composable
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,6 +143,19 @@ fun POIItem(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = poi.description)
+
+            if (poi.imageurl.isNotBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                AsyncImage(
+                    model = poi.imageurl,
+                    contentDescription = "Photo of ${poi.name}",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+            }
         }
     }
 }
